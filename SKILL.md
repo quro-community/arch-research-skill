@@ -1,6 +1,6 @@
 ---
 name: architecture-research
-description: Guides falsification-driven architecture research for hard design questions where the right answer is genuinely unknown and multiple designs compete — schema/data ownership, API contract shape, protocol semantics, system boundaries, consistency models, ML pipeline contracts, or any "should X own Y, and how should it be represented" question. Use whenever the user investigates an architectural unknown, wants a small experiment/spike to settle a design disagreement, is choosing between competing models (field vs. argument, this layer vs. that, this owner vs. that), wants to interpret partial experiment results into what's actually settled, or is about to freeze a contract and should check the evidence supports that yet. Trigger even without the words "architecture" or "research" — "not sure if this should live on X or Y," "which of these designs is right," "let's spike this," "prove this wrong before we build it," "did this experiment actually show what we think it did" are strong signals.
+description: Guides falsification-driven architecture research for hard design questions where the right answer is genuinely unknown and multiple designs compete — schema/data ownership, API contract shape, protocol semantics, system boundaries, consistency models, ML pipeline contracts, or any "should X own Y, and how should it be represented" question. Use whenever the user investigates an architectural unknown, wants a small experiment/spike to settle a design disagreement, is choosing between competing models (field vs. argument, this layer vs. that, this owner vs. that), wants to interpret partial experiment results into what's actually settled, or is about to freeze a contract and should check the evidence supports that yet. Trigger even without the words "architecture" or "research" — "not sure if this should live on X or Y," "which of these designs is right," "let's spike this," "prove this wrong before we build it," "did this experiment actually show what we think it did" are strong signals. Also use it to decide whether an experiment loop already in progress should pause for a retrospective checkpoint rather than run unchecked, to scope a new MVP against the accumulated kernel of already-settled findings instead of rebuilding from zero, and to recognize when a remaining question is a human preference call rather than something another experiment could resolve.
 ---
 
 # Architecture Research Through Falsifiable Inquiry
@@ -23,6 +23,34 @@ smallest thing that could prove one of the candidates wrong.
 
 This skill exists to make that discipline concrete and repeatable rather
 than a vague gesture at "let's prototype it."
+
+## Who drives this
+
+This skill assumes an AI agent — not a human — runs Phases 1 through 10:
+designing hypotheses, writing and executing experiment code, auditing its
+own instrumentation, and drafting evidence records. That changes what the
+human is for, and the split is worth keeping explicit through the whole
+process rather than assumed once and forgotten:
+
+```text
+The human owns:   intent, constraints, and value judgment — which
+                   question actually matters, what trade-offs are
+                   acceptable, and which of two equally-valid designs to
+                   prefer once evidence alone can't decide between them.
+
+The AI owns:      exploration execution, experiment design,
+                   instrumentation, and evidence synthesis — and, just as
+                   importantly, deciding when to stop and hand a question
+                   back rather than keep running experiments.
+```
+
+A human collaborator shouldn't need to read every experiment's code to
+trust the process. That only holds up if the AI actively watches its own
+trajectory and interrupts itself when it should — see "Research
+governance" later in this skill for when and how. An AI that keeps
+producing experiments just because it can is optimizing for activity, not
+for what the human actually needs: a shrinking set of open questions, and
+a clear signal for when only a preference remains.
 
 ## The core reframe
 
@@ -100,6 +128,9 @@ matter. The discipline of not collapsing them does.
 ## The research loop
 
 ```text
+Consult the kernel — already settled? already contradicted?
+        │
+        ▼
 Competing Hypotheses (≥2, mutually exclusive if possible)
         │
         ▼
@@ -124,10 +155,13 @@ Evidence record (claim, grounds, explicit non-conclusions)
 Apply the boundary-isolation test to what's left open
         │
         ▼
-Fold in as a versioned patch — never an in-place rewrite
+Fold into the kernel as a versioned patch — never an in-place rewrite
         │
         ▼
-Next, narrower question
+Checkpoint gate — continue, isolate, promote, or transfer to human?
+        │
+        ▼
+Next, narrower question (or stop)
 ```
 
 The output of one pass through this loop is never "the final design." It
@@ -137,6 +171,36 @@ with "and now we know the whole architecture" after one pass either asked
 a trivial question or is lying to itself.
 
 ---
+
+## Phase 0 — Load the kernel before opening a new question
+
+Before generating hypotheses for a question that touches a system this
+process has studied before, load the current **kernel**: the versioned
+record of what earlier passes through this loop actually settled (see
+`references/kernel-management.md`). Check two things before doing
+anything else:
+
+```text
+1. Does an existing kernel invariant already answer this question?
+   → If yes, this isn't research — cite the kernel and stop. Re-running
+     an experiment to confirm something already Confirmed is
+     confirmation-seeking against your own prior work.
+
+2. Does this question contradict a kernel invariant that's already
+   frozen?
+   → If yes, this is a kernel challenge, not an ordinary experiment. It
+     needs the stronger bar in `references/kernel-management.md`
+     ("Systematic re-evaluation") and should usually surface as a
+     Trigger 2 checkpoint (question drift — see "Research governance")
+     before any code gets written, because overturning something settled
+     can invalidate whatever was built on top of it.
+```
+
+If neither applies, this is a genuinely new question and Phase 1
+proceeds normally — but scope it as a **delta against the kernel**, not
+as a build from zero. An MVP that quietly re-derives things the kernel
+already settled has lost scope control before its first line of code;
+see the scope-control note in Phase 3.
 
 ## Phase 1 — Check whether this is actually an open question
 
@@ -193,7 +257,12 @@ A real experiment design specifies, explicitly:
   not touch. Excluding "final API design," "production integration," and
   "optimization" is usually correct — those are Phase-9-and-later
   concerns, and pulling them in early is how a falsification experiment
-  quietly turns into a half-finished feature.
+  quietly turns into a half-finished feature. Also exclude anything the
+  kernel (Phase 0) already settled — re-implementing a Confirmed
+  invariant inside a new MVP instead of just depending on it is the most
+  common way an MVP's scope quietly expands past what the current
+  question needs. See the scope-control note in
+  `references/kernel-management.md`.
 - **The transformations or conditions under test**, not just the
   end states. Prefer testing what happens to a thing across the
   operations your system actually performs on it (an update, a merge, a
@@ -375,11 +444,11 @@ treating everything as blocked because one piece is still open. Run it
 explicitly, in a table, for every open item at the end of a research pass
 — see `references/boundary-isolation-test.md`.
 
-## Phase 9 — Fold results in as a versioned patch, never a silent rewrite
+## Phase 9 — Fold results into the kernel as a versioned patch, never a silent rewrite
 
-When a research pass changes something that was previously documented or
-implemented, don't edit the old artifact in place. Write a patch that
-states, as a table:
+When a research pass changes something the kernel already records, don't
+edit the old kernel entry in place. Write a patch that states, as a
+table:
 
 ```text
 | Location | Before | After | Breaking? |
@@ -390,12 +459,14 @@ does *not* close. This preserves the ability to ask "does this new
 evidence falsify a previously frozen conclusion, or does it just advance
 an item that was already marked open?" — which is the right question to
 ask before reopening something settled, and a much cheaper one to answer
-against a paper trail of patches than against a history of in-place edits.
+against a paper trail of patches than against a history of in-place
+edits. See `references/kernel-management.md` for the kernel's structure
+and where a patch's entries land inside it.
 
-## Phase 10 — Gate promotion into the real system
+## Phase 10 — Gate promotion into the kernel
 
-An experimental finding earns its way into production contracts only
-after:
+An experimental finding earns its way into the kernel — and from there,
+into production contracts — only after:
 
 ```text
 repeated evidence
@@ -407,6 +478,11 @@ no known counterexample
 the boundary-isolation test applied to what remains open
 ```
 
+Passing this gate promotes a finding into the kernel, not directly into
+shipped code. The real system's code catching up to what the kernel now
+records is a separate, ordinary implementation task, not part of this
+research loop.
+
 Until then, keep experimental code physically and structurally separate
 from the system it's studying — in its own directory, with a one-way
 dependency (the experiment may depend on the real system to test it
@@ -416,6 +492,73 @@ reversed. This is the same discipline as an anti-corruption layer in
 domain-driven design or a feature-flagged spike in agile practice: the
 exploratory code is disposable by construction, so a wrong turn costs a
 deleted directory, not a migration.
+
+---
+
+## Research governance — checkpoints, retros, and knowing when to stop
+
+Running Phases 0–10 well on a single question is necessary but not
+sufficient. Across a whole research program, the AI is also responsible
+for noticing when the *trajectory* itself needs a human check-in, rather
+than mechanically starting the next experiment just because the last one
+finished. Five conditions warrant proposing a retro checkpoint — see
+`references/research-governance.md` for the full mechanics and
+`references/research-retro-template.md` for the report to bring to it:
+
+```text
+1. Evidence accumulation  — roughly every 3-5 experiments or evidence
+                             records, a trajectory (not just a single
+                             question) exists and deserves review.
+
+2. Question drift          — the question has moved from one layer to
+                             another (e.g. Layer A necessity → Layer D
+                             representation) without anyone deciding
+                             that on purpose. Also fires on any kernel
+                             challenge from Phase 0.
+
+3. Hypothesis expansion     — the hypothesis set is growing (H1, H2 →
+                             H1, H2, H3, H4...) instead of collapsing.
+                             That's the opposite of a healthy
+                             strong-inference pass, and usually means the
+                             abstraction level or the scope is wrong, not
+                             that more hypotheses are needed.
+
+4. Evidence saturation      — every remaining open item passes the
+                             boundary-isolation test (Phase 8) as
+                             ISOLATE, and what's left is genuinely
+                             Layer D (representation) rather than
+                             Layer A/B/C. Architecture research on this
+                             question is done; what remains is an
+                             implementation choice.
+
+5. Human value check needed — two or more candidates are each
+                             individually not falsified, and the
+                             boundary-isolation test can't resolve
+                             between them because nothing left is a
+                             matter of evidence. That's a preference
+                             question, not a research question, and no
+                             further experiment will change that.
+```
+
+The self-check before starting any experiment beyond the first is short
+enough to run every time without it feeling like ceremony:
+
+```text
+1. What decision could this specific experiment change?
+2. What previously unresolved uncertainty does it target?
+3. Why is another experiment better right now than implementing,
+   isolating (Phase 8), or accepting the uncertainty as-is?
+4. What would concretely happen if research stopped here?
+```
+
+If those four don't have real answers, the right move isn't to run the
+experiment anyway — it's to stop and bring a retro to the human, using
+the format in `references/research-retro-template.md`. A research
+partner that maximizes the number of experiments run is optimizing the
+wrong thing; the actual goal is decision-quality improvement per unit of
+exploration cost, and recognizing that a question is already answered
+(or has become a preference question) is as much a skill here as
+designing a clever experiment.
 
 ---
 
@@ -468,6 +611,29 @@ the first plausible-sounding answer rather than the best-supported one.
 Decide representation (Layer D) at the last responsible moment, after
 Layers A–C are actually settled.
 
+**Unbounded MVP scope creep.** An MVP that starts re-deriving invariants
+the kernel already settled, or that quietly absorbs "final API design"
+and "production integration" back into its included scope, isn't a
+tightly falsifiable experiment anymore — it's a half-built feature
+wearing an experiment's name. Scope every MVP as the delta beyond the
+kernel (Phase 0, Phase 3), not as a build from zero.
+
+**Kernel ossification.** The kernel earns trust by being hard to enter
+(Phase 10's gate) — it shouldn't also become impossible to leave.
+Treating every kernel entry as permanently beyond question is the mirror
+image of premature contract freezing above: it swaps "we decided too
+early" for "we refuse to ever reconsider," and both end the same way, by
+letting the evidence stop mattering. Kernel entries are strong priors
+earned by repeated falsification attempts, not axioms — see the
+systematic re-evaluation procedure in `references/kernel-management.md`.
+
+**Experimenting past the point of decision-relevance.** Running another
+experiment because the loop is comfortable, rather than because a
+specific open decision needs it, is confirmation-seeking at the level of
+a whole research program instead of a single test. If the self-check in
+"Research governance" can't name the decision at stake, that's the
+signal to checkpoint, not to keep going.
+
 ---
 
 ## Final principle
@@ -482,3 +648,7 @@ and can the next person tell exactly which uncertainty is gone and which
 remains." If a research write-up doesn't let a stranger answer "what's
 now settled, what's still open, and what would change my mind" in under a
 minute, it isn't finished yet — regardless of how much code it contains.
+
+That includes knowing when to stop. A research pass that keeps running
+experiments after the decision-relevant uncertainty is gone isn't rigor —
+it's the same failure this method exists to prevent, aimed at itself.

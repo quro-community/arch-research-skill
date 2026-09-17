@@ -192,13 +192,41 @@ Fix       Final principle gains a size check: if the settled content can be
           having established something.
 ```
 
+## CE-8 — The check only its author can satisfy
+
+```text
+Symptom   Every check passes, and no consumer can satisfy one.
+Evidence  The conformance check and the projections that had to satisfy it were
+          written by the same hand from the same model. The observation vocabulary
+          was minted TWICE — partly as methods on the records, partly as f-strings
+          inside the check functions — so the two ends could drift, and the half
+          that happened to use record methods was immune while the other was not.
+          902 experiment tests and the kernel suite passed throughout. The first
+          consumer that had to publish that vocabulary from the OUTSIDE found it
+          in one composition, and found a second instance after the first fix.
+Mechanism Phase 3 designs the case and Phase 4 pre-registers the check. One author,
+          one case, one mental model at both ends. The check therefore cannot be
+          wrong about its own vocabulary in any way the experiment can detect.
+          This is the ONLY defect class in this file that survives every audit in
+          Phase 5 intact: the detector is not broken. It fires when neutered, it
+          compares semantic properties, it uses no shared fixture. It is CORRECT —
+          correct about a vocabulary it invented.
+Fix       State the observation vocabulary in ONE place and have both the producer
+          and the checker read that one place. Then classify honestly: a check that
+          has only ever been satisfied by its own author has NOT been tested, and
+          its verdict is Unresolved on the axis "can anything other than its author
+          satisfy it" — however many times it has passed. The second consumer is an
+          instrument, and building it is part of the experiment rather than the
+          chore after it.
+```
+
 ---
 
 ## How to use this file
 
 ```text
 Run the method unchanged — every rule in it is earned.
-Then, at each retro, run these seven checks against the PROGRAMME rather than
+Then, at each retro, run these eight checks against the PROGRAMME rather than
 the window:
 
   1  Is the baseline that generated these questions still unexhausted?
@@ -208,8 +236,9 @@ the window:
   5  Is the founding question answered, in one place?
   6  Can this window's output be traced to the stated purpose?
   7  Can the settled content be stated compactly — and was it?
+  8  Was any check ever satisfied by something other than its author?
 
-A "no" on any of 1–7 is not a defect in the research. It is the class of
+A "no" on any of 1–8 is not a defect in the research. It is the class of
 defect that four clean closures, 902 tests and four retros did not catch,
 and it is cheaper to check than to discover.
 ```

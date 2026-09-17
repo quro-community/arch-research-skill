@@ -368,9 +368,27 @@ in sequence, not one you collapse.
 After the experiment runs and produces results you like, do one more
 pass: try to break your own measurement, not the hypothesis.
 
-This is the same move as **mutation testing** — deliberately introduce a
-defect into the thing being measured and confirm your instrumentation
-actually catches it. Concretely:
+**This pass is not only for results you like.** Audit the instrument
+whenever the result is *surprising in either direction* — and a
+surprising FAILURE is the more likely of the two to be your instrument
+rather than your subject, because a broken instrument usually makes
+things look worse, not better. A subject that fails for the expected
+reason needs no audit. A subject that fails for a reason you did not
+predict, or that fails while every neighbouring case passes, is as much
+a signal about the measurement as about the thing measured.
+
+The concrete case: a probe read a mounted state's payload as
+`state.payload`, found it empty, and reported the reference projection
+as failing to publish — which would have been a real finding, and was
+not, because the field is `domain_payload`. **A wrong reading and a real
+finding are identical until you check the instrument.** The check that
+settled it was reading the constructor that builds the object, not
+reasoning about the projection that fills it. Do that before writing up
+a negative.
+
+Then, for the positive case, the pass is the same move as **mutation
+testing** — deliberately introduce a defect into the thing being
+measured and confirm your instrumentation actually catches it. Concretely:
 
 - Deliberately neuter the mechanism under test and confirm the "it
   worked" signal turns to "it failed." If it doesn't, the signal is
@@ -386,6 +404,37 @@ actually catches it. Concretely:
   independent.
 - Check that every allow-listed exception in a leakage/isolation check is
   actually exercised by a test, not merely declared and forgotten.
+
+**One more, and it is a different kind of defect from the four above.**
+Those ask *does the detector fire*. This one asks *is the detector's
+subject independently established*:
+
+```text
+Did the SAME HAND author the check and the thing the check reads?
+
+If yes, the check can only ever prove internal consistency. State the
+observation vocabulary in ONE place and have both ends read it. If the
+producer spells it out on one side and the checker spells it out again
+on the other, the two drift — and nothing in the experiment can detect
+it, because one author writes both ends from one mental model.
+```
+
+This survives every other audit in this phase, because the four items
+above all pass: the detector fires when neutered, the comparison uses
+the semantic property, there is no fixture bleed, the exceptions are
+exercised. The check is *correct*. It is correct about a vocabulary it
+invented, and the first consumer to satisfy that vocabulary from the
+outside — a second author, a production port, a composed scenario — is
+the only thing that can find the seam.
+
+Corollary for the classification: a check that has only ever been
+satisfied by its own author has **not been tested**. Its verdict is
+`Unresolved` on the axis "can anything other than its author satisfy
+it", however many times it has passed.
+
+See counterexample CE-8 in `references/counterexamples.md` — it is the
+one defect class that survives every other item in this phase intact,
+because the detector is not broken.
 
 Treat what this pass finds as valuable evidence about the experiment, not
 as an embarrassment to bury. The instructive finding is usually the bug

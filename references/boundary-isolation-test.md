@@ -21,7 +21,7 @@ instead of making one blanket call for the whole pile.
 
 ## The test
 
-For each open item, ask three questions in order:
+For each open item, ask four questions in order:
 
 ```text
 1. Can a boundary law be stated now?
@@ -43,21 +43,52 @@ For each open item, ask three questions in order:
    strictly additive to what's fixed now (a new case, a new field, a new
    registered option) — or would it require breaking/changing something
    that's already been committed to? If additive, yes.
+
+4. Is filling it in SOMEONE'S JOB, with a trigger?
+
+   Not "could it be filled in later" — who, and triggered by what? An
+   item that will be forced by the next build but has no owner and no
+   trigger is ORPHANED, and orphaned items do not stay isolated. They
+   come due all at once, at implementation time, with no evidence
+   behind them.
 ```
+
+**Why question 4 exists.** Questions 1–3 are answered against the
+*proofs*: "could leaving this unresolved silently violate something
+already proven?" That is the correct test for **freezing**, and it is the
+wrong test for **building**. An item can be perfectly safe against every
+proof and still be a forced decision the moment anyone lands the feature
+it constrains.
+
+And landing is not a research event. No retro, checkpoint, or evidence
+record is triggered by "someone started building", so nothing in the loop
+will ever schedule an orphaned item. Four passes can each correctly
+return ISOLATE, and the fifth produces a queue of decisions nobody
+researched.
 
 ## The verdict
 
 ```text
-YES to all three   →   ISOLATE
+YES to all four    →   ISOLATE
     Fix the boundary law now. Leave the content as an explicit,
     named extension point — not a vague TODO, a real named slot
     with the boundary law attached to it.
 
-NO to any           →   CANNOT ISOLATE — GENUINELY BLOCKING
+NO to 1, 2 or 3    →   CANNOT ISOLATE — GENUINELY BLOCKING
     This has to be resolved, at least minimally, before the
     surrounding design can honestly be called settled. Don't
     isolate around it; that just hides a real gap behind a
     reassuring label.
+
+YES to 1-3,
+NO to 4            →   ISOLATE — ORPHANED
+    Safe to leave open, and due at the next build, with nobody
+    scheduled to fill it. Fix the boundary law as above, then move
+    the item to a DECISION QUEUE: a named owner, a named trigger,
+    and an honest note on whether any evidence can inform the
+    choice or whether it is a preference the domain must settle.
+    An orphaned item does not need more research. It needs someone
+    to decide.
 ```
 
 ## Worked shape (fill in your own item)
@@ -105,6 +136,13 @@ item's verdict next to each other makes it obvious when several
 sign to merge them into a single follow-up experiment rather than three
 separate vague ones).
 
-| Item | (1) Law statable? | (2) Content safe open? | (3) Superset later? | Verdict |
-|---|---|---|---|---|
-| | | | | |
+| Item | (1) Law statable? | (2) Content safe open? | (3) Superset later? | (4) Owner + trigger? | Verdict |
+|---|---|---|---|---|---|
+| | | | | | |
+
+The column-4 entries are the ones worth reading twice. A table of clean
+`ISOLATE` verdicts with an empty owner column is not a settled design —
+it is a decision queue that has not been acknowledged as one. If several
+orphaned items share a trigger (all due the first time anyone builds a
+particular module, say), that is a scheduling fact worth acting on now,
+while it is one queue instead of seven separate surprises.

@@ -202,6 +202,30 @@ as a build from zero. An MVP that quietly re-derives things the kernel
 already settled has lost scope control before its first line of code;
 see the scope-control note in Phase 3.
 
+**Load the purpose too, and make it load-bearing.** The kernel says what
+is settled; it does not say what the work is *for*. Before generating
+hypotheses, locate the stated purpose — the consumer, the deliverable,
+the thing that gets better if this succeeds. If none is written down,
+say so and ask for one; a programme can be exactly right about
+everything except its purpose, and no amount of falsification detects
+that (counterexample CE-6 in `references/counterexamples.md`).
+
+Three checks, cheapest first:
+
+```text
+1. Is a purpose stated anywhere, and does it name a consumer?
+   → If not: stop and ask. Do not generate hypotheses against an
+     unstated purpose; every later stage inherits the ambiguity.
+
+2. Is this question traceable to that purpose?
+   → If not, this may be a legitimate question that belongs to a
+     different programme. Say which one, or say that it is curiosity.
+
+3. Does answering it change what the consumer can do?
+   → If not, it is a confirmation run. See the prior-prediction check
+     in Phase 3.
+```
+
 ## Phase 1 — Check whether this is actually an open question
 
 Before designing anything, ask whether the question as posed already
@@ -286,6 +310,27 @@ A real experiment design specifies, explicitly:
 - **What result would falsify which hypothesis.** Write this down before
   running anything. If you can't state in advance what a failing result
   would look like, the experiment isn't well-formed yet.
+- **The prior-prediction check.** Before building: does a rule you have
+  already stated — a contract, an invariant, a membership test, a prior
+  finding — already predict this experiment's outcome? If yes, say so in
+  the design, and justify the cost in terms the prediction does not
+  cover. A confirmation purchased at discovery cost is the most
+  expensive kind of true result, and it is invisible in the final report
+  because everything passed.
+
+```text
+An experiment whose headline outcome was already predicted by a stated
+rule has two legitimate shapes:
+
+  (a) re-scope to the uncertainty the rule does NOT settle, and let the
+      predicted outcome be a precondition rather than a finding;
+  (b) run it as an explicit confirmation with a stated reason the
+      prediction might be wrong — a boundary the rule does not reach, a
+      case the rule's derivation silently assumed away.
+
+Without (a) or (b), the mechanism has been scoped instead of the
+uncertainty. See counterexample CE-4 in `references/counterexamples.md`.
+```
 
 See `references/mvp-experiment-template.md` for a fill-in-the-blanks
 version of this, and `references/worked-examples.md` for four full
@@ -420,7 +465,7 @@ See `references/evidence-record-template.md` for the full template.
 ## Phase 8 — Apply the boundary-isolation test to what's left open
 
 Not every open question needs to block progress, and not every open
-question can be safely deferred. Use this three-question test on each
+question can be safely deferred. Use this four-question test on each
 remaining item:
 
 ```text
@@ -430,12 +475,28 @@ remaining item:
    law be silently violated while it stays unresolved?
 3. Will filling in the content later be a superset refinement
    (strictly additive), not a breaking change to what's fixed now?
+4. Is filling it in SOMEONE'S JOB, with a trigger — or is it orphaned?
 ```
 
-**Yes to all three → isolate.** Fix the boundary law and a minimal typed
+**Yes to all four → isolate.** Fix the boundary law and a minimal typed
 core; leave the rest as an explicit, named extension point.
-**No to any → cannot isolate.** It has to be resolved, at least
+**No to 1–3 → cannot isolate.** It has to be resolved, at least
 minimally, before you can honestly call the surrounding design settled.
+**Yes to 1–3 and no to 4 → isolate, but ORPHANED.** Safe to leave open,
+and due at the next build, with nobody scheduled to fill it.
+
+Question 4 exists because questions 1–3 are answered against the
+*proofs* — "can no existing proof be silently violated?" — and that is
+the right test for freezing and the wrong test for building. An item can
+be perfectly safe against every proof and still be a forced decision the
+moment anyone lands the feature. **Landing is not a research event, so
+no retro will ever schedule it.** Orphaned items accumulate silently and
+then come due all at once, with no research behind any of them — see
+counterexample CE-3 in `references/counterexamples.md`.
+
+An orphaned item does not go on a "safely deferred" list. It goes into a
+**decision queue** with a named trigger, because what it needs is not
+more evidence — it is a choice someone has to make.
 
 This is the single most reusable tool in this whole method: it's what
 lets a team keep shipping the parts that are actually settled without
@@ -463,6 +524,28 @@ against a paper trail of patches than against a history of in-place
 edits. See `references/kernel-management.md` for the kernel's structure
 and where a patch's entries land inside it.
 
+**A patch that is written but not applied is not a patch.** The closure
+document — written by the window that did the work — will be current. The
+*shared* documents a reader actually consults (the design doc, the law
+register, the README, the specification) are owned by nobody, and they
+rot silently. A register that under-reports the frozen set is worse than
+no register, because it is consulted and believed.
+
+So every patch names, explicitly, the canonical documents it makes
+stale, and updates them in the same pass:
+
+```text
+- which shared documents does this finding contradict or supersede?
+- which printed/derived artifact (a law list, a status table, a count)
+  does it change, and is that artifact regenerated?
+- which document referenced a name, file or signature this patch moved?
+```
+
+Five independent staleness defects in one programme were found only by
+reconciling three corpora by hand, and none of them was visible to a
+per-window audit — see counterexample CE-2 in
+`references/counterexamples.md`.
+
 ## Phase 10 — Gate promotion into the kernel
 
 An experimental finding earns its way into the kernel — and from there,
@@ -483,6 +566,32 @@ shipped code. The real system's code catching up to what the kernel now
 records is a separate, ordinary implementation task, not part of this
 research loop.
 
+**But the handoff is part of this loop, and it has two required outputs.**
+"It is an ordinary implementation task" is true and is not a reason to
+hand over nothing. When a range closes, the programme owes whoever builds
+next:
+
+```text
+(1) The founding question, answered, in one place.
+
+    A programme is opened by a question. Four windows later that question
+    is usually answered, and the answer is distributed across four
+    evidence records because each window reports its own findings. Stating
+    it in one paragraph — or stating explicitly that it is NOT yet
+    answered — is the artifact a consumer actually needs, and it belongs
+    to no window. See counterexample CE-5.
+
+(2) The decision queue (§ Phase 8, question 4).
+
+    What landing will force, itemised, with the evidence that can inform
+    each choice and an explicit statement of which items have none. An
+    isolated item arriving at implementation as a surprise is a planning
+    failure of this loop, not of the implementer.
+```
+
+A finding recorded only in its own evidence record has not been folded
+into the kernel — it has been *filed next to it*.
+
 Until then, keep experimental code physically and structurally separate
 from the system it's studying — in its own directory, with a one-way
 dependency (the experiment may depend on the real system to test it
@@ -501,7 +610,7 @@ Running Phases 0–10 well on a single question is necessary but not
 sufficient. Across a whole research program, the AI is also responsible
 for noticing when the *trajectory* itself needs a human check-in, rather
 than mechanically starting the next experiment just because the last one
-finished. Five conditions warrant proposing a retro checkpoint — see
+finished. Six conditions warrant proposing a retro checkpoint — see
 `references/research-governance.md` for the full mechanics and
 `references/research-retro-template.md` for the report to bring to it:
 
@@ -538,7 +647,31 @@ finished. Five conditions warrant proposing a retro checkpoint — see
                              matter of evidence. That's a preference
                              question, not a research question, and no
                              further experiment will change that.
+
+6. Baseline exhaustion     — the roadmap, phase plan or design document
+                             that GENERATED this trajectory has no
+                             unstarted items left. Everything since has
+                             been generated from the previous pass's
+                             residuals. This is the most dangerous
+                             condition, because residuals are an
+                             inexhaustible source of valid, narrow,
+                             plausible questions, and a retro that
+                             recalibrates against an exhausted baseline
+                             will keep producing them indefinitely.
 ```
+
+**Condition 6 is the one that hides.** The other five are visible from
+inside a trajectory — the evidence pile grows, the question drifts, the
+hypotheses multiply. Exhaustion is invisible from inside, because the
+work still looks like work and every individual question is still sound.
+It is detected only by going back to the document that planned the
+trajectory and counting what is left undone.
+
+When condition 6 fires, the next question is a **roadmap decision, not a
+research decision**. A residual list cannot supply the input it needs —
+recalibrate against the wider corpus instead: the phase plan, the design
+documents, the stated purpose (Phase 0), the consumer. See
+counterexample CE-1 in `references/counterexamples.md`.
 
 The self-check before starting any experiment beyond the first is short
 enough to run every time without it feeling like ceremony:
@@ -549,6 +682,11 @@ enough to run every time without it feeling like ceremony:
 3. Why is another experiment better right now than implementing,
    isolating (Phase 8), or accepting the uncertainty as-is?
 4. What would concretely happen if research stopped here?
+5. Does a rule I have already stated predict this experiment's outcome?
+   (If yes → Phase 3's prior-prediction check: re-scope to what the rule
+   does not settle, or state why the prediction might be wrong.)
+6. Can I trace this experiment to the stated purpose — the consumer, the
+   deliverable — in one sentence? (If not → Phase 0's purpose check.)
 ```
 
 If those four don't have real answers, the right move isn't to run the
@@ -634,6 +772,48 @@ a whole research program instead of a single test. If the self-check in
 "Research governance" can't name the decision at stake, that's the
 signal to checkpoint, not to keep going.
 
+**Mechanism-scoped milestones.** Scoping a pass as a *thing to
+investigate* ("does folding need a primitive?") instead of an
+*uncertainty to remove* ("is there any operation a declared record cannot
+express?"). A mechanism-scoped pass has a natural end — the mechanism is
+covered — and it will reach that end whether or not the uncertainty was
+the load-bearing one, at full discovery cost. Worse, when a rule you have
+already stated predicts the outcome, the pass becomes a confirmation
+purchased at discovery cost, and the report shows nothing wrong because
+everything passed. Phase 3's prior-prediction check is the guard.
+
+**The unapplied patch.** Recording a finding in its own evidence record
+and treating that as folding it into the kernel. It has been filed *next
+to* the kernel. The shared documents a reader actually consults — the
+design doc, the register, the status table, the README — are owned by
+nobody and rot silently, and a register that under-reports is consulted
+and believed. Name the documents your patch makes stale, in the patch
+(Phase 9).
+
+**Orphaned isolation.** Leaving an item open because no *proof* depends
+on it, and never asking who fills it in. Questions 1–3 of the
+boundary-isolation test are answered against the proofs; they say nothing
+about landing. Orphaned items come due all at once, at build time, with
+no research behind them — and because landing is not a research event, no
+retro will schedule them. Phase 8's question 4 is the guard: an isolated
+item needs a named owner and a trigger, not just a clean verdict.
+
+**Rigour without direction.** A programme can be exactly right about
+everything except what it is for. Falsification tests hypotheses; it does
+not test whether the hypotheses were the ones worth having. If no purpose
+is written down, or the record never references it, that is not a gap in
+the research — it is a gap in the programme, and it is invisible to every
+check in this skill. Phase 0's purpose load is the guard, and it is the
+cheapest thing in the whole method.
+
+**Volume read as value.** When the output format is per-experiment
+evidence, a long programme's accumulated record starts to look like the
+deliverable. It is not: it is a cost paid by every future reader. If the
+settled content can be stated compactly, stating it compactly *is* the
+deliverable — and the founding question answered in one paragraph is
+worth more to whoever builds next than four closures that each answer a
+quarter of it.
+
 ---
 
 ## Final principle
@@ -648,6 +828,35 @@ and can the next person tell exactly which uncertainty is gone and which
 remains." If a research write-up doesn't let a stranger answer "what's
 now settled, what's still open, and what would change my mind" in under a
 minute, it isn't finished yet — regardless of how much code it contains.
+
+Two checks on that measure, because it is self-flattering:
+
+```text
+1. Can the settled content be stated compactly?
+
+   If four passes produced one page of load-bearing content and ninety
+   pages of evidence for it, the one page is the deliverable and the
+   ninety are its support. Say which is which, or a reader will treat the
+   volume as the finding.
+
+2. Is the founding question answered, in one place?
+
+   It is usually answered. It is almost never collected.
+
+A stranger needs "what is settled" to include the answer to the question
+the programme was opened to ask — not a map of where the quarters of the
+answer are filed.
+```
+
+And one check on the process, because rigour is not direction:
+
+```text
+A method that cannot tell "we established something true" from "we
+established something worth establishing" will produce both at the same
+cost, and report them identically. That is the failure this skill is
+least able to catch from inside, and the reason Phases 0, 8 (question 4)
+and 9 (naming stale documents) exist.
+```
 
 That includes knowing when to stop. A research pass that keeps running
 experiments after the decision-relevant uncertainty is gone isn't rigor —
